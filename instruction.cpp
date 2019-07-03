@@ -28,11 +28,10 @@ void Instruction::ID(Executor *exec)
 	switch (typeEnc)
 	{
 		case I:
-			imm = Util::getBits(20, 20, inst) | (Util::getBits(21, 24, inst) << 1) |
-				  (Util::getBits(25, 30, inst) << 5) | (Util::getBits(31, 31, inst) ? Util::bitmask(11, 31) : 0);
+			imm = Util::getBits(20, 30, inst) | (Util::getBits(31, 31, inst) ? Util::bitmask(11, 31) : 0);
 			break;
 		case S:
-			imm = Util::getBits(7, 7, inst) | (Util::getBits(8, 11, inst) << 1) | (Util::getBits(25, 30, inst) << 5) |
+			imm = Util::getBits(7, 11, inst) | (Util::getBits(25, 30, inst) << 5) |
 				  (Util::getBits(31, 31, inst) ? Util::bitmask(11, 31) : 0);
 			break;
 		case B:
@@ -40,12 +39,11 @@ void Instruction::ID(Executor *exec)
 				  (Util::getBits(7, 7, inst) << 11) | (Util::getBits(31, 31, inst) ? Util::bitmask(12, 31) : 0);
 			break;
 		case U:
-			imm = (Util::getBits(12, 19, inst) << 12) | (Util::getBits(20, 31, inst) << 20);
+			imm = (Util::getBits(12, 31, inst) << 12);
 			break;
 		case J:
-			imm = (Util::getBits(21, 24, inst) << 1) | (Util::getBits(25, 30, inst) << 5) |
-				  (Util::getBits(20, 20, inst) << 11) | (Util::getBits(12, 19, inst) << 12) |
-				  (Util::getBits(31, 31, inst) ? Util::bitmask(20, 31) : 0);
+			imm = (Util::getBits(21, 30, inst) << 1) | (Util::getBits(20, 20, inst) << 11) |
+				  (Util::getBits(12, 19, inst) << 12) | (Util::getBits(31, 31, inst) ? Util::bitmask(20, 31) : 0);
 			break;
 		default:
 			imm = 0;
