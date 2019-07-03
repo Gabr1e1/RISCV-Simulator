@@ -3,4 +3,4 @@ project(RISCV_Simulator)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(RISCV_Simulator main.cpp utility.hpp executor.h executor.cpp instruction.h instruction.cpp)
+add_executable(code main.cpp utility.hpp executor.h executor.cpp instruction.h instruction.cpp)
