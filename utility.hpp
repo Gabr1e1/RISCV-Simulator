@@ -14,7 +14,7 @@ public:
 	inline static unsigned int bitmask(unsigned int l, unsigned int r)
 	{
 		if (l > r) std::swap(l, r);
-		return (1u << r) - (1u << l);
+		return (unsigned int)((1ull << (r + 1)) - (1ull << l));
 	}
 
 	inline static unsigned int getBits(unsigned int l, unsigned int r, unsigned int a)
@@ -25,7 +25,8 @@ public:
 	static int HEX2DEC(std::string &str, int l, int r)
 	{
 		int ret = 0;
-		for (int i = l; i <= r; i++) ret = ret * 16 + (str[i] - '0');
+		for (int i = l; i <= r; i++)
+			ret = ret * 16 + ((str[i] >= '0' && str[i] <= '9') ? (str[i] - '0') : (str[i] - 'A' + 10));
 		return ret;
 	}
 };

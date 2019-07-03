@@ -29,6 +29,7 @@ protected:
 	int ALUOutput;
 	int cond;
 	int lmd;
+	int npc;
 
 public:
 	Instruction(unsigned int _inst, EncodingType _typeEnc);

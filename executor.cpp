@@ -12,6 +12,7 @@ Executor::Executor(int MemSize) : mem(new char[MemSize]), pc(0)
 
 void Executor::addInstruction(unsigned int offset, unsigned int inst)
 {
+//	std::cerr << offset << " " << inst << std::endl;
 	memcpy(mem + offset, reinterpret_cast<char *>(&inst), sizeof(inst));
 }
 
@@ -34,8 +35,11 @@ void Executor::read()
 			curStr = str + curStr;
 			if (cnt == 0)
 			{
-				addInstruction(curAdd, (unsigned)Util::HEX2DEC(curStr, 0, (int)curStr.length() - 1));
+//				std::cerr << curAdd << " " << curStr << " "
+//						  << (unsigned) Util::HEX2DEC(curStr, 0, (int) curStr.length() - 1) << std::endl;
+				addInstruction(curAdd, (unsigned) Util::HEX2DEC(curStr, 0, (int) curStr.length() - 1));
 				curAdd += 4;
+				curStr = "";
 			}
 		}
 	}
@@ -47,6 +51,7 @@ int Executor::execute()
 	while (true)
 	{
 		auto curInst = *reinterpret_cast<unsigned int *>(mem + pc);
+//		printf("PC: %x\n", pc);
 		if (curInst == 0x00c68223) break;
 		auto cur = parseInst(curInst);
 		cur->IF(this);
@@ -54,6 +59,10 @@ int Executor::execute()
 		cur->EX(this);
 		cur->MEM(this);
 		cur->WB(this);
+		reg[0] = 0;
+		delete cur;
+//		for (int i = 0; i < 32; i++) std::cout << reg[i] << " ";
+//		std::cout << std::endl;
 	}
 	return ((unsigned int) reg[10]) & 255u;
 }
@@ -82,7 +91,7 @@ Instruction *Executor::parseInst(unsigned int inst)
 		case 0b1100011:
 			return new CtrlTrans(inst, B);
 		default:
-			std::cerr << "CANT PARSE: " << inst << std::endl;
+//			std::cerr << "CANT PARSE: " << inst << std::endl;
 			break;
 	}
 }

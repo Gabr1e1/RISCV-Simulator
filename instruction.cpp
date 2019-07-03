@@ -6,15 +6,18 @@
 #include "executor.h"
 
 Instruction::Instruction(unsigned int _inst, EncodingType _typeEnc) : inst(_inst), typeEnc(_typeEnc)
-{}
+{
+
+}
 
 void Instruction::IF(Executor *exec)
 {
-	exec->pc += 4;
+	npc = exec->pc + 4;
 }
 
 void Instruction::ID(Executor *exec)
 {
+//	printf("INST: %x\n", inst);
 	rs1 = Util::getBits(15, 19, inst);
 	rs1v = exec->reg[rs1];
 
@@ -27,15 +30,15 @@ void Instruction::ID(Executor *exec)
 		case I:
 			imm = Util::getBits(20, 20, inst) | (Util::getBits(21, 24, inst) << 1) |
 				  (Util::getBits(25, 30, inst) << 5) |
-				  ((Util::getBits(31, 31, inst) ? Util::bitmask(11, 31) : 0) << 11);
+				  (Util::getBits(31, 31, inst) ? Util::bitmask(11, 31) : 0);
 			break;
 		case S:
 			imm = Util::getBits(7, 7, inst) | (Util::getBits(8, 11, inst) << 1) | (Util::getBits(25, 30, inst) << 5) |
-				  ((Util::getBits(31, 31, inst) ? Util::bitmask(11, 31) : 0) << 11);
+				  (Util::getBits(31, 31, inst) ? Util::bitmask(11, 31) : 0);
 			break;
 		case B:
 			imm = (Util::getBits(8, 11, inst) << 1) | (Util::getBits(25, 30, inst) << 5) |
-				  (Util::getBits(7, 7, inst) << 11) | ((Util::getBits(31, 31, inst) ? Util::bitmask(12, 31) : 0) << 12);
+				  (Util::getBits(7, 7, inst) << 11) | (Util::getBits(31, 31, inst) ? Util::bitmask(12, 31) : 0);
 			break;
 		case U:
 			imm = (Util::getBits(12, 19, inst) << 12) | (Util::getBits(20, 31, inst) << 20);
@@ -43,16 +46,18 @@ void Instruction::ID(Executor *exec)
 		case J:
 			imm = (Util::getBits(21, 24, inst) << 1) | (Util::getBits(25, 30, inst) << 5) |
 				  (Util::getBits(20, 20, inst) << 11) | (Util::getBits(12, 19, inst) << 12) |
-				  ((Util::getBits(31, 31, inst) ? Util::bitmask(12, 31) : 0) << 12);
+				  (Util::getBits(31, 31, inst) ? Util::bitmask(20, 31) : 0);
 			break;
 		default:
 			imm = 0;
 			break;
 	}
+//	std::cerr << "RS1: " << rs1 << " " << rs1v << " " << "rs2: " << rs2 << " " << rs2v << " " << "rd: " << rd << " "
+//			  << "imm: " << imm << std::endl;
 }
 
 
-CtrlTrans::CtrlTrans(unsigned int _inst, EncodingType _type) : Instruction(inst, _type)
+CtrlTrans::CtrlTrans(unsigned int _inst, EncodingType _type) : Instruction(_inst, _type)
 {
 	typeInst = CT;
 	auto op = Util::getBits(0, 6, inst);
@@ -66,12 +71,12 @@ void CtrlTrans::EX(Executor *exec)
 	switch (type)
 	{
 		case JAL:
-			exec->pc += imm;
 			ALUOutput = exec->pc + 4;
+			exec->pc += imm;
 			break;
 		case JALR:
-			exec->pc = ((unsigned) (exec->pc + imm) >> 1) << 1;
 			ALUOutput = exec->pc + 4;
+			exec->pc = ((unsigned) (rs1v + imm) >> 1) << 1;
 			break;
 		case BEQ:
 			cond = (rs1v == rs2v);
@@ -103,16 +108,17 @@ void CtrlTrans::MEM(Executor *exec)
 	if (type == BEQ || type == BNE || type == BLT || type == BLTU || type == BGE || type == BGEU)
 	{
 		if (cond) exec->pc = ALUOutput;
+		else exec->pc = npc;
 	}
 }
 
 void CtrlTrans::WB(Executor *exec)
 {
-	/* Do Nothing */
+	if (type == JAL || type == JALR) exec->reg[rd] = ALUOutput;
 }
 
 
-LoadNStore::LoadNStore(unsigned int _inst, EncodingType _type) : Instruction(inst, _type)
+LoadNStore::LoadNStore(unsigned int _inst, EncodingType _type) : Instruction(_inst, _type)
 {
 	typeInst = LNS;
 	if (typeEnc == I) type = (LNSType) Util::getBits(12, 14, inst);
@@ -126,6 +132,7 @@ void LoadNStore::EX(Executor *exec)
 
 void LoadNStore::MEM(Executor *exec)
 {
+	exec->pc = npc;
 	switch (type)
 	{
 		case LB:
@@ -162,7 +169,7 @@ void LoadNStore::WB(Executor *exec)
 	if (type == LB || type == LH || type == LW || type == LBU || type == LHU) exec->reg[rd] = lmd;
 }
 
-IntCom::IntCom(unsigned int inst, EncodingType _type) : Instruction(inst, _type)
+IntCom::IntCom(unsigned int _inst, EncodingType _type) : Instruction(_inst, _type)
 {
 	typeInst = IC;
 	auto op = Util::getBits(0, 6, inst);
@@ -259,7 +266,7 @@ void IntCom::EX(Executor *exec)
 
 void IntCom::MEM(Executor *exec)
 {
-	/* do nothing */
+	exec->pc = npc;
 }
 
 void IntCom::WB(Executor *exec)
