@@ -1,8 +1,12 @@
 #include <iostream>
+#include "executor.hpp"
 
 int main()
 {
-	Excecutor exec;
-	
+	auto *exec = new Executor();
+	exec->read();
+	std::cout << exec->execute() << std::endl;
+	delete exec;
+
 	return 0;
 }

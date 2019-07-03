@@ -24,6 +24,11 @@ public:
 	int rs1v, rs2v;
 	int imm;
 
+protected:
+	int ALUOutput;
+	int cond;
+	int lmd;
+
 public:
 	Instruction(unsigned int _inst, EncodingType _typeEnc) : inst(_inst), typeEnc(_typeEnc)
 	{}
@@ -74,11 +79,11 @@ public:
 		}
 	}
 
-	virtual void EX(Executor *exec) = delete;
+	virtual void EX(Executor *exec) = 0;
 
-	virtual void MEM(Executor *exec) = delete;
+	virtual void MEM(Executor *exec) = 0;
 
-	virtual void WB(Executor *exec) = delete;
+	virtual void WB(Executor *exec) = 0;
 };
 
 class CtrlTrans : Instruction
@@ -103,7 +108,33 @@ public:
 
 	void EX(Executor *exec)
 	{
+		switch (type)
+		{
+			case JAL: exec->pc += imm; ALUOutput = exec->pc + 4; break;
+			case JALR: exec->pc = ((unsigned)(exec->pc + imm) >> 1) << 1; ALUOutput = exec->pc + 4; break;
+			case BEQ: cond = (rs1v == rs2v); break;
+			case BNE: cond = (rs1v != rs2v); break;
+			case BLT: cond = (rs1v < rs2v); break;
+			case BLTU: cond = ((unsigned)rs1v < (unsigned)rs2v); break;
+			case BGE: cond = (rs1v >= rs2v); break;
+			case BGEU: cond = ((unsigned)rs1v >= (unsigned)rs2v); break;
+			default: break;
+		}
+		if (type == BEQ || type == BNE || type == BLT || type == BLTU || type == BGE || type == BGEU)
+			ALUOutput = exec->pc + imm;
+	}
 
+	void MEM(Executor *exec)
+	{
+		if (type == BEQ || type == BNE || type == BLT || type == BLTU || type == BGE || type == BGEU)
+		{
+			if (cond) exec->pc = ALUOutput;
+		}
+	}
+
+	void WB(Executor *exec)
+	{
+		/* Do Nothing */
 	}
 };
 
@@ -112,8 +143,7 @@ class LoadNStore : Instruction
 private:
 	enum LNSType
 	{
-		LB, LH, LW, XXX, LBU, LHU,
-		SB, SH, SW
+		LB, LH, LW, XXX, LBU, LHU, SB, SH, SW
 	};
 	LNSType type;
 
@@ -123,6 +153,33 @@ public:
 		typeInst = LNS;
 		if (type == I) type = (LNSType) Util::getBits(12, 14, inst);
 		else type = (LNSType) (Util::getBits(12, 14, inst) + 6);
+	}
+
+public:
+	void EX(Executor *exec)
+	{
+		ALUOutput = rs1v + imm;
+	}
+
+	void MEM(Executor *exec)
+	{
+		switch (type)
+		{
+			case LB: lmd = *reinterpret_cast<int8_t*>(exec->mem + ALUOutput); break;
+			case LH: lmd = *reinterpret_cast<int16_t*>(exec->mem + ALUOutput); break;
+			case LW: lmd = *reinterpret_cast<int32_t*>(exec->mem + ALUOutput); break;
+			case LBU: lmd = *reinterpret_cast<uint8_t*>(exec->mem + ALUOutput); break;
+			case LHU: lmd = *reinterpret_cast<uint16_t*>(exec->mem + ALUOutput); break;
+			case SB: memcpy(exec->mem + ALUOutput, reinterpret_cast<char *>(&rs2v), 1); break;
+			case SH: memcpy(exec->mem + ALUOutput, reinterpret_cast<char *>(&rs2v), 2); break;
+			case SW: memcpy(exec->mem + ALUOutput, reinterpret_cast<char *>(&rs2v), 4); break;
+			default: break;
+		}
+	}
+
+	void WB(Executor *exec)
+	{
+		if (type == LB || type == LH || type == LW || type == LBU || type == LHU) exec->reg[rd] = lmd;
 	}
 };
 
@@ -158,6 +215,48 @@ public:
 			if (op == 0b0110111) type = LUI;
 			else type = AUIPC;
 		}
+	}
+
+public:
+	void EX(Executor *exec)
+	{
+		ALUOutput = 0;
+		switch (type)
+		{
+			case ADDI: ALUOutput = imm + rs1v; break;
+			case SLLI: ALUOutput = (int)((unsigned)(rs1v << Util::getBits(0, 4, imm))); break;
+			case SLTI: ALUOutput =  (rs1v < imm); break;
+			case SLTIU: ALUOutput = (rs1v < (unsigned)imm); break;
+			case XORI: ALUOutput = rs1v ^ imm; break;
+			case SRLI: ALUOutput = (int)((unsigned)(rs1v >> Util::getBits(0, 4, imm))); break;
+			case ORI: ALUOutput = rs1v | imm; break;
+			case ANDI: ALUOutput = rs1v & imm; break;
+			case SRAI: ALUOutput = rs1v >> Util::getBits(0, 4, imm); break;
+
+			case ADD: ALUOutput = rs1v + rs2v; break;
+			case SLL: ALUOutput = (int)((unsigned)rs1v << Util::getBits(0, 4, rs2v)); break;
+			case SLT: ALUOutput = (rs1v < rs2v); break;
+			case SLTU: ALUOutput = ((unsigned)rs1v < (unsigned)(rs2v)); break;
+			case XOR: ALUOutput = rs1v ^ rs2v; break;
+			case SRL: ALUOutput = (int)((unsigned)rs1v >> Util::getBits(0, 4, rs2v)); break;
+			case OR: ALUOutput = rs1v | rs2v; break;
+			case AND: ALUOutput = rs1v & rs2v; break;
+			case SUB: ALUOutput = rs1v - rs2v; break;
+			case SRA: ALUOutput = rs1v >> Util::getBits(0, 4, rs2v); break;
+			case LUI: ALUOutput = imm; break;
+			case AUIPC: ALUOutput = imm + exec->pc; break;
+			default: break;
+		}
+	}
+
+	void MEM(Executor *exec)
+	{
+		/* do nothing */
+	}
+
+	void WB(Executor *exec)
+	{
+		exec->reg[rd] = ALUOutput;
 	}
 };
 
