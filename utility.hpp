@@ -25,7 +25,7 @@ public:
 	static int HEX2DEC(std::string &str, int l, int r)
 	{
 		int ret = 0;
-		for (int i = r; i >= l; i--) ret = ret * 16 + (str[i] - '0');
+		for (int i = l; i <= r; i++) ret = ret * 16 + (str[i] - '0');
 		return ret;
 	}
 };
