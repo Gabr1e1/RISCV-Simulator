@@ -29,8 +29,7 @@ void Instruction::ID(Executor *exec)
 	{
 		case I:
 			imm = Util::getBits(20, 20, inst) | (Util::getBits(21, 24, inst) << 1) |
-				  (Util::getBits(25, 30, inst) << 5) |
-				  (Util::getBits(31, 31, inst) ? Util::bitmask(11, 31) : 0);
+				  (Util::getBits(25, 30, inst) << 5) | (Util::getBits(31, 31, inst) ? Util::bitmask(11, 31) : 0);
 			break;
 		case S:
 			imm = Util::getBits(7, 7, inst) | (Util::getBits(8, 11, inst) << 1) | (Util::getBits(25, 30, inst) << 5) |
@@ -76,7 +75,7 @@ void CtrlTrans::EX(Executor *exec)
 			break;
 		case JALR:
 			ALUOutput = exec->pc + 4;
-			exec->pc = ((unsigned) (rs1v + imm) >> 1) << 1;
+			exec->pc = rs1v + imm;
 			break;
 		case BEQ:
 			cond = (rs1v == rs2v);
@@ -200,34 +199,35 @@ void IntCom::EX(Executor *exec)
 			ALUOutput = imm + rs1v;
 			break;
 		case SLLI:
-			ALUOutput = (int) ((unsigned) (rs1v << Util::getBits(0, 4, imm)));
+			ALUOutput = rs1v << Util::getBits(0, 4, (unsigned) imm);
 			break;
 		case SLTI:
 			ALUOutput = (rs1v < imm);
 			break;
 		case SLTIU:
-			ALUOutput = (rs1v < (unsigned) imm);
+			ALUOutput = ((unsigned) rs1v < (unsigned) imm);
 			break;
 		case XORI:
-			ALUOutput = rs1v ^ imm;
+			ALUOutput = (unsigned) rs1v ^ (unsigned) imm;
 			break;
 		case SRLI:
-			ALUOutput = (int) ((unsigned) (rs1v >> Util::getBits(0, 4, imm)));
+			ALUOutput = (int) (((unsigned) rs1v) >> Util::getBits(0, 4, (unsigned) imm));
 			break;
 		case ORI:
-			ALUOutput = rs1v | imm;
+			ALUOutput = (unsigned) rs1v | (unsigned) imm;
 			break;
 		case ANDI:
-			ALUOutput = rs1v & imm;
+			ALUOutput = (unsigned) rs1v & (unsigned) imm;
 			break;
 		case SRAI:
 			ALUOutput = rs1v >> Util::getBits(0, 4, imm);
+//			else ALUOutput = ((unsigned)(rs1v) >> Util::getBits(0, 4, imm)) | Util::bitmask(31 - Util::getBits(0, 4, imm) + 1, 31);
 			break;
 		case ADD:
 			ALUOutput = rs1v + rs2v;
 			break;
 		case SLL:
-			ALUOutput = (int) ((unsigned) rs1v << Util::getBits(0, 4, rs2v));
+			ALUOutput = (int) (((unsigned) rs1v) << Util::getBits(0, 4, (unsigned) rs2v));
 			break;
 		case SLT:
 			ALUOutput = (rs1v < rs2v);
@@ -236,22 +236,23 @@ void IntCom::EX(Executor *exec)
 			ALUOutput = ((unsigned) rs1v < (unsigned) (rs2v));
 			break;
 		case XOR:
-			ALUOutput = rs1v ^ rs2v;
+			ALUOutput = (unsigned) rs1v ^ (unsigned) rs2v;
 			break;
 		case SRL:
-			ALUOutput = (int) ((unsigned) rs1v >> Util::getBits(0, 4, rs2v));
+			ALUOutput = (int) (((unsigned) rs1v) >> Util::getBits(0, 4, (unsigned) rs2v));
 			break;
 		case OR:
-			ALUOutput = rs1v | rs2v;
+			ALUOutput = (unsigned) rs1v | (unsigned) rs2v;
 			break;
 		case AND:
-			ALUOutput = rs1v & rs2v;
+			ALUOutput = (unsigned) rs1v & (unsigned) rs2v;
 			break;
 		case SUB:
 			ALUOutput = rs1v - rs2v;
 			break;
 		case SRA:
 			ALUOutput = rs1v >> Util::getBits(0, 4, rs2v);
+//			else ALUOutput = ((unsigned)(rs1v) >> Util::getBits(0, 4, rs2v)) | Util::bitmask(31 - Util::getBits(0, 4, rs2v) + 1, 31);
 			break;
 		case LUI:
 			ALUOutput = imm;

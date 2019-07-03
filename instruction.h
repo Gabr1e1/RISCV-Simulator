@@ -27,7 +27,7 @@ public:
 
 protected:
 	int ALUOutput;
-	int cond;
+	bool cond;
 	int lmd;
 	int npc;
 

@@ -3,7 +3,7 @@
 
 int main()
 {
-//	freopen("pi.data", "r", stdin);
+	freopen("bulgarian.data", "r", stdin);
 	auto *exec = new Executor();
 	exec->read();
 	std::cout << exec->execute() << std::endl;

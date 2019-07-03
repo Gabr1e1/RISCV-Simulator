@@ -5,7 +5,7 @@
 #include "executor.h"
 #include "instruction.h"
 
-Executor::Executor(int MemSize) : mem(new char[MemSize]), pc(0)
+Executor::Executor(int MemSize) : mem(new char[MemSize + 1]), pc(0)
 {
 	memset(mem, 0, sizeof(mem));
 }
@@ -26,7 +26,7 @@ void Executor::read()
 	{
 		if (str[0] == '@')
 		{
-			curAdd = (unsigned int) Util::HEX2DEC(str, 1, 8);
+			curAdd = Util::HEX2DEC(str, 1, 8);
 			curStr = "";
 		}
 		else
@@ -37,7 +37,7 @@ void Executor::read()
 			{
 //				std::cerr << curAdd << " " << curStr << " "
 //						  << (unsigned) Util::HEX2DEC(curStr, 0, (int) curStr.length() - 1) << std::endl;
-				addInstruction(curAdd, (unsigned) Util::HEX2DEC(curStr, 0, (int) curStr.length() - 1));
+				addInstruction(curAdd, Util::HEX2DEC(curStr, 0, (int) curStr.length() - 1));
 				curAdd += 4;
 				curStr = "";
 			}

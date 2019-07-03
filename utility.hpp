@@ -22,9 +22,9 @@ public:
 		return (a & bitmask(l, r)) >> l;
 	}
 
-	static int HEX2DEC(std::string &str, int l, int r)
+	static unsigned int HEX2DEC(std::string &str, int l, int r)
 	{
-		int ret = 0;
+		unsigned int ret = 0;
 		for (int i = l; i <= r; i++)
 			ret = ret * 16 + ((str[i] >= '0' && str[i] <= '9') ? (str[i] - '0') : (str[i] - 'A' + 10));
 		return ret;
