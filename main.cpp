@@ -2,6 +2,7 @@
 
 int main()
 {
-	std::cout << "Hello, World!" << std::endl;
+	Excecutor exec;
+	
 	return 0;
 }
