@@ -53,7 +53,11 @@ int Executor::execute()
 //		printf("PC: %x\n", pc);
 		if (curInst == 0x00c68223) break;
 		auto cur = parseInst(curInst);
-		if (!cur->IF(this)) continue;
+		if (!cur->IF(this))
+		{
+			delete cur;
+			continue;
+		}
 		cur->ID(this);
 		cur->EX(this);
 		cur->MEM(this);
