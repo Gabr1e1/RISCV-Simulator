@@ -73,7 +73,7 @@ void CtrlTrans::EX(Executor *exec)
 			break;
 		case JALR:
 			ALUOutput = exec->pc + 4;
-			exec->pc = rs1v + imm;
+			exec->pc = ((unsigned) (rs1v + imm) >> 1) << 1;
 			break;
 		case BEQ:
 			cond = (rs1v == rs2v);
@@ -257,6 +257,7 @@ void IntCom::EX(Executor *exec)
 			break;
 		case AUIPC:
 			ALUOutput = imm + exec->pc;
+			npc = ALUOutput;
 			break;
 		default:
 			break;
