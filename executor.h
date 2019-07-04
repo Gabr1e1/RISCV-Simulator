@@ -17,7 +17,7 @@ public:
 	int reg[32] = {0};
 	char *mem;
 
-	int pipelineRegister[4][5] = {0};
+	int pipelineRegister[4][5] = {{0}};
 	int pc = 0;
 
 public:
