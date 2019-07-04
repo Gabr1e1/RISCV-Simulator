@@ -47,24 +47,21 @@ void Executor::read()
 int Executor::execute()
 {
 	pc = 0;
-	while (true)
+	Instruction *cur[5] = {nullptr};
+	do
 	{
+		printf("%x\n",pc);
+		if (cur[4] != nullptr) cur[4]->WB(this), delete cur[4];
+		if (cur[3] != nullptr) cur[3]->MEM(this);
+		if (cur[2] != nullptr) cur[2]->EX(this);
+		if (cur[1] != nullptr) cur[1]->ID(this);
+		for (int i = 4; i >= 0; i--) cur[i] = cur[i - 1];
 		auto curInst = *reinterpret_cast<unsigned int *>(mem + pc);
-//		printf("PC: %x\n", pc);
-		if (curInst == 0x00c68223) break;
-		auto cur = parseInst(curInst);
-		if (!cur->IF(this))
-		{
-			delete cur;
-			continue;
-		}
-		cur->ID(this);
-		cur->EX(this);
-		cur->MEM(this);
-		cur->WB(this);
-		reg[0] = 0;
-		delete cur;
-	}
+		if (curInst == 0x00c68223) continue;
+		cur[0] = parseInst(curInst);
+		cur[0]->IF(this);
+	} while (cur[0] != nullptr || cur[1] != nullptr || cur[2] != nullptr || cur[3] != nullptr || cur[4] != nullptr);
+
 	return ((unsigned int) reg[10]) & 255u;
 }
 
