@@ -8,8 +8,31 @@
 #include <iostream>
 #include "utility.hpp"
 
-enum EncodingType { R, I, S, B, U, J };
-enum InstructionType { CT, LNS, IC };
+enum EncodingType
+{
+	R, I, S, B, U, J
+};
+enum InstructionType
+{
+	CT, LNS, IC
+};
+
+enum IFIDRegister
+{
+	IR0, NPC0
+};
+enum IDEXRegister
+{
+	IR1, NPC1, A1, B1, Imm1
+};
+enum EXMEMRegister
+{
+	IR2, ALUOutput2, cond2, B2
+};
+enum MEMWBRegister
+{
+	IR3, ALUOutput3, LMD3
+};
 
 class Executor;
 
@@ -22,20 +45,13 @@ public:
 public:
 	unsigned int inst;
 	unsigned int rs1, rs2, rd;
-	int rs1v, rs2v;
-	int imm;
-
-protected:
-	int ALUOutput;
-	bool cond;
-	int lmd;
-	int npc;
 
 public:
 	Instruction(unsigned int _inst, EncodingType _typeEnc);
 
 public:
-	void IF(Executor *exec);
+	bool IF(Executor *exec);
+
 	void ID(Executor *exec);
 
 	virtual void EX(Executor *exec) = 0;
@@ -50,8 +66,7 @@ class CtrlTrans : public Instruction
 private:
 	enum CTType
 	{
-		BEQ, BNE, XXX, XXXX, BLT, BGE, BLTU, BGEU,
-		JAL, JALR
+		BEQ, BNE, XXX, XXXX, BLT, BGE, BLTU, BGEU, JAL, JALR
 	};
 	CTType type;
 
@@ -90,9 +105,27 @@ class IntCom : public Instruction
 private:
 	enum ICType
 	{
-		ADDI, SLLI, SLTI, SLTIU, XORI, SRLI, ORI, ANDI, SRAI,
-		ADD, SLL, SLT, SLTU, XOR, SRL, OR, AND, SUB, SRA,
-		LUI, AUIPC
+		ADDI,
+		SLLI,
+		SLTI,
+		SLTIU,
+		XORI,
+		SRLI,
+		ORI,
+		ANDI,
+		SRAI,
+		ADD,
+		SLL,
+		SLT,
+		SLTU,
+		XOR,
+		SRL,
+		OR,
+		AND,
+		SUB,
+		SRA,
+		LUI,
+		AUIPC
 	};
 	ICType type;
 

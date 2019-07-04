@@ -14,15 +14,21 @@ class Instruction;
 class Executor
 {
 public:
-	int reg[32] = {0}, pc;
+	int reg[32] = {0};
 	char *mem;
+
+	int pipelineRegister[4][5] = {0};
+	int pc = 0;
 
 public:
 	Executor(int MemSize = 0x20000);
+
 	void addInstruction(unsigned int offset, unsigned int inst);
 
 	void read();
+
 	int execute();
+
 	Instruction *parseInst(unsigned int inst);
 };
 

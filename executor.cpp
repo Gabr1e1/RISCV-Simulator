@@ -5,14 +5,13 @@
 #include "executor.h"
 #include "instruction.h"
 
-Executor::Executor(int MemSize) : mem(new char[MemSize + 1]), pc(0)
+Executor::Executor(int MemSize) : mem(new char[MemSize])
 {
 	memset(mem, 0, sizeof(mem));
 }
 
 void Executor::addInstruction(unsigned int offset, unsigned int inst)
 {
-//	std::cerr << offset << " " << inst << std::endl;
 	memcpy(mem + offset, reinterpret_cast<char *>(&inst), sizeof(inst));
 }
 
@@ -54,15 +53,13 @@ int Executor::execute()
 //		printf("PC: %x\n", pc);
 		if (curInst == 0x00c68223) break;
 		auto cur = parseInst(curInst);
-		cur->IF(this);
+		if (!cur->IF(this)) continue;
 		cur->ID(this);
 		cur->EX(this);
 		cur->MEM(this);
 		cur->WB(this);
 		reg[0] = 0;
 		delete cur;
-//		for (int i = 0; i < 32; i++) std::cout << reg[i] << " ";
-//		std::cout << std::endl;
 	}
 	return ((unsigned int) reg[10]) & 255u;
 }
