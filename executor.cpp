@@ -44,17 +44,19 @@ void Executor::read()
 	}
 }
 
-bool Executor::lockCheck(Instruction *inst)
+bool Executor::lockCheck()
 {
-	cnt++;
-	return cnt % 3 != 0;
+	auto a = Util::getBits(15, 19, (unsigned) pipelineRegister[0][IR0]);
+	auto op = Util::getBits(0, 6, (unsigned) pipelineRegister[1][IR1]);
+	auto c = Util::getBits(7, 11, (unsigned) pipelineRegister[1][IR1]);
+	return true;
 }
 
 int Executor::execute()
 {
 	pc = 0;
 	Instruction *cur[5] = {nullptr};
-	unsigned int curInst;
+	unsigned int curInst = 0;
 
 	do
 	{
@@ -64,28 +66,29 @@ int Executor::execute()
 		if (cur[2] != nullptr) cur[2]->EX(this);
 		if (cur[1] != nullptr) cur[1]->ID(this);
 
-		curInst = *reinterpret_cast<unsigned int *>(mem + pc);
-		cur[0] = parseInst(curInst);
-		if (lockCheck(cur[0]))
+		if (cur[0] == nullptr) //no command stalling
 		{
-			if (cur[0] != nullptr) delete cur[0];
-			cur[0] = nullptr;
-		}
+			curInst = *reinterpret_cast<unsigned int *>(mem + pc);
+			cur[0] = parseInst(curInst);
 
-//		if (cur[0] != nullptr)
-//		{
-//			printf("PC: %x\n", pc);
+//			printf("%x\n", pc);
 //			for (int i = 0; i < 32; i++) std::cout << reg[i] << " ";
 //			std::cout << std::endl;
-//		}
 
-		if (cur[0] != nullptr && !(cur[0]->IF(this)))
-		{
-			if (cur[0] != nullptr) delete cur[0], cur[0] = nullptr;
-			if (cur[1] != nullptr) delete cur[1], cur[1] = nullptr;
+			if (cur[0] != nullptr && !(cur[0]->IF(this)))
+			{
+				if (cur[0] != nullptr) delete cur[0], cur[0] = nullptr;
+				if (cur[1] != nullptr) delete cur[1], cur[1] = nullptr;
+			}
+			for (int i = 4; i > 0 + (cur[0] != nullptr && lockCheck()); i--) cur[i] = cur[i - 1];
+//			printf("%d\n", (cur[0] != nullptr && lockCheck()));
+			cur[0 + (cur[0] != nullptr && lockCheck())] = nullptr;
 		}
-		for (int i = 4; i > 0; i--) cur[i] = cur[i - 1];
-		cur[0] = nullptr;
+		else
+		{
+			for (int i = 4; i > 0; i--) cur[i] = cur[i - 1];
+			cur[0] = nullptr;
+		}
 	} while ((cur[0] != nullptr || cur[1] != nullptr || cur[2] != nullptr || cur[3] != nullptr || cur[4] != nullptr) ||
 			 (curInst != 0x00c68223));
 
@@ -94,7 +97,6 @@ int Executor::execute()
 
 Instruction *Executor::parseInst(unsigned int inst)
 {
-//	printf("%x\n",inst);
 	if (inst == 0x00c68223) return nullptr;
 	auto op = Util::getBits(0, 6, inst);
 	switch (op)
@@ -118,7 +120,7 @@ Instruction *Executor::parseInst(unsigned int inst)
 		case 0b1100011:
 			return new CtrlTrans(inst, B);
 		default:
-			std::cerr << "CANT PARSE: " << inst << std::endl;
+//			std::cerr << "CANT PARSE: " << inst << std::endl;
 			return nullptr;
 	}
 }

@@ -39,7 +39,6 @@ class Executor;
 class Instruction
 {
 public:
-	InstructionType typeInst;
 	EncodingType typeEnc;
 
 public:
@@ -50,6 +49,10 @@ public:
 
 public:
 	void flush(Executor *exec);
+
+	void getForwardResult(Executor *exec);
+
+	void getForwardResult2(Executor *exec);
 
 	bool IF(Executor *exec);
 

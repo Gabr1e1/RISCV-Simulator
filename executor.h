@@ -19,7 +19,6 @@ public:
 
 	int pipelineRegister[4][5] = {{0}};
 	int pc = 0;
-	int cnt = 0;
 
 public:
 	Executor(int MemSize = 0x20000);
@@ -32,7 +31,7 @@ public:
 
 	Instruction *parseInst(unsigned int inst);
 
-	bool lockCheck(Instruction *inst);
+	bool lockCheck();
 };
 
 #endif //RISCV_SIMULATOR_EXECUTOR_H
