@@ -44,29 +44,58 @@ void Executor::read()
 	}
 }
 
+bool Executor::lockCheck(Instruction *inst)
+{
+	cnt++;
+	return cnt % 3 != 0;
+}
+
 int Executor::execute()
 {
 	pc = 0;
 	Instruction *cur[5] = {nullptr};
+	unsigned int curInst;
+
 	do
 	{
-		printf("%x\n",pc);
-		if (cur[4] != nullptr) cur[4]->WB(this), delete cur[4];
+		if (cur[4] != nullptr) cur[4]->WB(this), delete cur[4], cur[4] = nullptr;
+		reg[0] = 0;
 		if (cur[3] != nullptr) cur[3]->MEM(this);
 		if (cur[2] != nullptr) cur[2]->EX(this);
 		if (cur[1] != nullptr) cur[1]->ID(this);
-		for (int i = 4; i >= 0; i--) cur[i] = cur[i - 1];
-		auto curInst = *reinterpret_cast<unsigned int *>(mem + pc);
-		if (curInst == 0x00c68223) continue;
+
+		curInst = *reinterpret_cast<unsigned int *>(mem + pc);
 		cur[0] = parseInst(curInst);
-		cur[0]->IF(this);
-	} while (cur[0] != nullptr || cur[1] != nullptr || cur[2] != nullptr || cur[3] != nullptr || cur[4] != nullptr);
+		if (lockCheck(cur[0]))
+		{
+			if (cur[0] != nullptr) delete cur[0];
+			cur[0] = nullptr;
+		}
+
+//		if (cur[0] != nullptr)
+//		{
+//			printf("PC: %x\n", pc);
+//			for (int i = 0; i < 32; i++) std::cout << reg[i] << " ";
+//			std::cout << std::endl;
+//		}
+
+		if (cur[0] != nullptr && !(cur[0]->IF(this)))
+		{
+			if (cur[0] != nullptr) delete cur[0], cur[0] = nullptr;
+			if (cur[1] != nullptr) delete cur[1], cur[1] = nullptr;
+		}
+		for (int i = 4; i > 0; i--) cur[i] = cur[i - 1];
+		cur[0] = nullptr;
+	} while ((cur[0] != nullptr || cur[1] != nullptr || cur[2] != nullptr || cur[3] != nullptr || cur[4] != nullptr) ||
+			 (curInst != 0x00c68223));
 
 	return ((unsigned int) reg[10]) & 255u;
 }
 
 Instruction *Executor::parseInst(unsigned int inst)
 {
+//	printf("%x\n",inst);
+	if (inst == 0x00c68223) return nullptr;
 	auto op = Util::getBits(0, 6, inst);
 	switch (op)
 	{
@@ -89,8 +118,8 @@ Instruction *Executor::parseInst(unsigned int inst)
 		case 0b1100011:
 			return new CtrlTrans(inst, B);
 		default:
-//			std::cerr << "CANT PARSE: " << inst << std::endl;
-			break;
+			std::cerr << "CANT PARSE: " << inst << std::endl;
+			return nullptr;
 	}
 }
 

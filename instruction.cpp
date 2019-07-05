@@ -7,7 +7,12 @@
 
 Instruction::Instruction(unsigned int _inst, EncodingType _typeEnc) : inst(_inst), typeEnc(_typeEnc)
 {
+//	printf("New Inst: %x\n", inst);
+}
 
+void Instruction::flush(Executor *exec)
+{
+	exec->pipelineRegister[2][cond2] = false;
 }
 
 bool Instruction::IF(Executor *exec)
@@ -16,11 +21,17 @@ bool Instruction::IF(Executor *exec)
 	auto op = Util::getBits(0, 6, (unsigned) exec->pipelineRegister[2][IR2]);
 	if (op == 0b1100011 && exec->pipelineRegister[2][cond2])
 	{
+//		printf("Branch Taken\n");
 		exec->pipelineRegister[0][NPC0] = exec->pc = exec->pipelineRegister[2][ALUOutput2];
-		exec->pipelineRegister[2][cond2] = false;
+		flush(exec);
 		return false;
 	}
-	else exec->pipelineRegister[0][NPC0] = exec->pc = exec->pc + 4;
+	if ((op == 0b1101111 || op == 0b1100111) && exec->pipelineRegister[2][cond2])
+	{
+		flush(exec);
+		return false;
+	}
+	exec->pipelineRegister[0][NPC0] = exec->pc = exec->pc + 4;
 	return true;
 }
 
@@ -30,13 +41,16 @@ void Instruction::ID(Executor *exec)
 	exec->pipelineRegister[1][IR1] = exec->pipelineRegister[0][IR0];
 	exec->pipelineRegister[1][NPC1] = exec->pipelineRegister[0][NPC0];
 
-	rs1 = Util::getBits(15, 19, (unsigned) exec->pipelineRegister[1][IR1]);
+	int rs1 = Util::getBits(15, 19, (unsigned) exec->pipelineRegister[1][IR1]);
 	exec->pipelineRegister[1][A1] = exec->reg[rs1];
 
-	rs2 = Util::getBits(20, 24, (unsigned) exec->pipelineRegister[1][IR1]);
+	int rs2 = Util::getBits(20, 24, (unsigned) exec->pipelineRegister[1][IR1]);
 	exec->pipelineRegister[1][B1] = exec->reg[rs2];
 
-	rd = Util::getBits(7, 11, (unsigned) exec->pipelineRegister[1][IR1]);
+	int rd = Util::getBits(7, 11, (unsigned) exec->pipelineRegister[1][IR1]);
+
+//	printf("Using: %d %d %d\n", rs1, rs2, rd);
+
 	auto inst = (unsigned) exec->pipelineRegister[1][IR1];
 	switch (typeEnc)
 	{
@@ -86,13 +100,13 @@ void CtrlTrans::EX(Executor *exec)
 	{
 		case JAL:
 			exec->pipelineRegister[2][ALUOutput2] = exec->pipelineRegister[1][NPC1];
-			exec->pc += exec->pipelineRegister[1][Imm1] - 4;
-//			exec->pipelineRegister[2][cond2] = true;
+			exec->pc = exec->pipelineRegister[1][NPC1] + exec->pipelineRegister[1][Imm1] - 4;
+			exec->pipelineRegister[2][cond2] = true;
 			break;
 		case JALR:
 			exec->pipelineRegister[2][ALUOutput2] = exec->pipelineRegister[1][NPC1];
-			exec->pc = (((unsigned) (exec->pipelineRegister[1][A1] + exec->pipelineRegister[1][Imm1])) >> 1) << 1;
-//			exec->pipelineRegister[2][cond2] = true;
+			exec->pc = ((unsigned) (exec->pipelineRegister[1][A1] + exec->pipelineRegister[1][Imm1])) >> 1 << 1;
+			exec->pipelineRegister[2][cond2] = true;
 			break;
 		case BEQ:
 			exec->pipelineRegister[2][cond2] = (exec->pipelineRegister[1][A1] == exec->pipelineRegister[1][B1]);
@@ -124,11 +138,17 @@ void CtrlTrans::EX(Executor *exec)
 void CtrlTrans::MEM(Executor *exec)
 {
 	exec->pipelineRegister[3][IR3] = exec->pipelineRegister[2][IR2];
+	exec->pipelineRegister[3][ALUOutput3] = exec->pipelineRegister[2][ALUOutput2];
 }
 
 void CtrlTrans::WB(Executor *exec)
 {
-	if (type == JAL || type == JALR) exec->reg[rd] = exec->pipelineRegister[2][ALUOutput2]; //rd should be MEM/WB.IR[rd]
+	int rd = Util::getBits(7, 11, (unsigned int) exec->pipelineRegister[3][IR3]);
+	if (type == JAL || type == JALR)
+	{
+		exec->reg[rd] = exec->pipelineRegister[3][ALUOutput3];
+//		printf("JAL Modified %d %d\n", rd, exec->reg[rd]);
+	}
 }
 
 
@@ -190,8 +210,12 @@ void LoadNStore::MEM(Executor *exec)
 
 void LoadNStore::WB(Executor *exec)
 {
+	int rd = Util::getBits(7, 11, (unsigned int) exec->pipelineRegister[3][IR3]);
 	if (type == LB || type == LH || type == LW || type == LBU || type == LHU)
+	{
+//		printf("Modified %d to %d\n", rd, exec->pipelineRegister[3][LMD3]);
 		exec->reg[rd] = exec->pipelineRegister[3][LMD3];
+	}
 }
 
 IntCom::IntCom(unsigned int _inst, EncodingType _type) : Instruction(_inst, _type)
@@ -222,6 +246,7 @@ void IntCom::EX(Executor *exec)
 	switch (type)
 	{
 		case ADDI:
+//			printf("Add: %d\n", exec->pipelineRegister[1][Imm1] + exec->pipelineRegister[1][A1]);
 			exec->pipelineRegister[2][ALUOutput2] = exec->pipelineRegister[1][Imm1] + exec->pipelineRegister[1][A1];
 			break;
 		case SLLI:
@@ -254,7 +279,6 @@ void IntCom::EX(Executor *exec)
 		case SRAI:
 			exec->pipelineRegister[2][ALUOutput2] =
 					exec->pipelineRegister[1][A1] >> Util::getBits(0, 4, exec->pipelineRegister[1][Imm1]);
-//			else exec->pipelineRegister[2][ALUOutput2]= ((unsigned)(exec->pipelineRegister[1][A1]) >> Util::getBits(0, 4, imm)) | Util::bitmask(31 - Util::getBits(0, 4, imm) + 1, 31);
 			break;
 		case ADD:
 			exec->pipelineRegister[2][ALUOutput2] = exec->pipelineRegister[1][A1] + exec->pipelineRegister[1][B1];
@@ -292,7 +316,6 @@ void IntCom::EX(Executor *exec)
 		case SRA:
 			exec->pipelineRegister[2][ALUOutput2] =
 					exec->pipelineRegister[1][A1] >> Util::getBits(0, 4, (unsigned) exec->pipelineRegister[1][B1]);
-//			else exec->pipelineRegister[2][ALUOutput2]= ((unsigned)(exec->pipelineRegister[1][A1]) >> Util::getBits(0, 4, exec->pipelineRegister[1][B1])) | Util::bitmask(31 - Util::getBits(0, 4, exec->pipelineRegister[1][B1]) + 1, 31);
 			break;
 		case LUI:
 			exec->pipelineRegister[2][ALUOutput2] = exec->pipelineRegister[1][Imm1];
@@ -313,5 +336,7 @@ void IntCom::MEM(Executor *exec)
 
 void IntCom::WB(Executor *exec)
 {
+	int rd = Util::getBits(7, 11, (unsigned int) exec->pipelineRegister[3][IR3]);
+//	printf("Modified %d to %d\n", rd, exec->pipelineRegister[3][ALUOutput3]);
 	exec->reg[rd] = exec->pipelineRegister[3][ALUOutput3];
 }

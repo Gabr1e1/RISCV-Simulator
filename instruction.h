@@ -44,12 +44,13 @@ public:
 
 public:
 	unsigned int inst;
-	unsigned int rs1, rs2, rd;
 
 public:
 	Instruction(unsigned int _inst, EncodingType _typeEnc);
 
 public:
+	void flush(Executor *exec);
+
 	bool IF(Executor *exec);
 
 	void ID(Executor *exec);
