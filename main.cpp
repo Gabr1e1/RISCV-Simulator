@@ -3,7 +3,9 @@
 
 int main()
 {
-//	freopen("bulgarian.data", "r", stdin);
+	freopen("pi.data", "r", stdin);
+//	freopen("myans.out","w",stdout);
+	std::ios::sync_with_stdio(false);
 	auto *exec = new Executor();
 	exec->read();
 	std::cout << exec->execute() << std::endl;
