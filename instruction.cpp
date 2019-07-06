@@ -85,18 +85,22 @@ void Instruction::getForwardResult(Executor *exec)
 	int rs1 = Util::getBits(15, 19, (unsigned) exec->pipelineRegister[1][IR1]);
 	int rs2 = Util::getBits(20, 24, (unsigned) exec->pipelineRegister[1][IR1]);
 
+//	could already be written to register
+	exec->pipelineRegister[1][A1] = exec->reg[rs1];
+	exec->pipelineRegister[1][B1] = exec->reg[rs2];
+
 //	MEM stage
 	int rd = Util::getBits(7, 11, (unsigned) exec->pipelineRegister[3][IR3]);
 	int op = Util::getBits(0, 6, (unsigned) exec->pipelineRegister[3][IR3]);
 
 	if ((rs1 == rd && rd != 0) && (op == 0b0110111 || op == 0b0110011 || op == 0b0010011 || op == 0b1101111 ||
-					  op == 0b1100111)) //LUI, JAL, JALR, IntCom could change the value in MEM stage
+								   op == 0b1100111)) //LUI, JAL, JALR, IntCom could change the value in MEM stage
 		exec->pipelineRegister[1][A1] = exec->pipelineRegister[3][ALUOutput3];
 	if ((rs1 == rd && rd != 0) && op == 0b0000011) //Load could change the value in MEM stage
 		exec->pipelineRegister[1][A1] = exec->pipelineRegister[3][LMD3];
 
 	if ((rs2 == rd && rd != 0) && (op == 0b0110111 || op == 0b0110011 || op == 0b0010011 || op == 0b1101111 ||
-					  op == 0b1100111)) //JAL, JALR, IntCom could change the value in MEM stage
+								   op == 0b1100111)) //JAL, JALR, IntCom could change the value in MEM stage
 		exec->pipelineRegister[1][B1] = exec->pipelineRegister[3][ALUOutput3];
 	if ((rs2 == rd && rd != 0) && op == 0b0000011) //Load could change the value in MEM stage
 		exec->pipelineRegister[1][B1] = exec->pipelineRegister[3][LMD3];
@@ -106,27 +110,11 @@ void Instruction::getForwardResult(Executor *exec)
 	op = Util::getBits(0, 6, (unsigned) exec->pipelineRegister[2][IR2]);
 
 	if ((rs1 == rd && rd != 0) && (op == 0b0110111 || op == 0b0110011 || op == 0b0010011 || op == 0b1101111 ||
-					  op == 0b1100111)) //JAL, JALR, IntCom could change the value in ALU stage
+								   op == 0b1100111)) //JAL, JALR, IntCom could change the value in ALU stage
 		exec->pipelineRegister[1][A1] = exec->pipelineRegister[2][ALUOutput2];
 	if ((rs2 == rd && rd != 0) && (op == 0b0110111 || op == 0b0110011 || op == 0b0010011 || op == 0b1101111 ||
-					  op == 0b1100111)) //JAL, JALR, IntCom could change the value in ALU stage
+								   op == 0b1100111)) //JAL, JALR, IntCom could change the value in ALU stage
 		exec->pipelineRegister[1][B1] = exec->pipelineRegister[2][ALUOutput2];
-}
-
-
-void Instruction::getForwardResult2(Executor *exec)
-{
-	int rs2 = Util::getBits(20, 24, (unsigned) exec->pipelineRegister[2][IR2]);
-
-//	MEM stage
-	int rd = Util::getBits(7, 11, (unsigned) exec->pipelineRegister[3][IR3]);
-	int op = Util::getBits(0, 6, (unsigned) exec->pipelineRegister[3][IR3]);
-
-	if (rs2 == rd && (op == 0b0110111 || op == 0b0110011 || op == 0b0010011 || op == 0b1101111 ||
-					  op == 0b1100111)) //JAL, JALR, IntCom could change the value in MEM stage
-		exec->pipelineRegister[2][B2] = exec->pipelineRegister[3][ALUOutput3];
-	if (rs2 == rd && op == 0b0000011) //Load could change the value in MEM stage
-		exec->pipelineRegister[2][B2] = exec->pipelineRegister[3][LMD3];
 }
 
 CtrlTrans::CtrlTrans(unsigned int _inst, EncodingType _type) : Instruction(_inst, _type)
@@ -139,8 +127,8 @@ CtrlTrans::CtrlTrans(unsigned int _inst, EncodingType _type) : Instruction(_inst
 
 void CtrlTrans::EX(Executor *exec)
 {
-	exec->pipelineRegister[2][IR2] = exec->pipelineRegister[1][IR1];
 	getForwardResult(exec);
+	exec->pipelineRegister[2][IR2] = exec->pipelineRegister[1][IR1];
 	switch (type)
 	{
 		case JAL:
@@ -209,17 +197,11 @@ void LoadNStore::EX(Executor *exec)
 	exec->pipelineRegister[2][IR2] = exec->pipelineRegister[1][IR1];
 	exec->pipelineRegister[2][ALUOutput2] = exec->pipelineRegister[1][A1] + exec->pipelineRegister[1][Imm1];
 	exec->pipelineRegister[2][B2] = exec->pipelineRegister[1][B1];
+	exec->pipelineRegister[2][Imm2] = exec->pipelineRegister[1][Imm1];
 }
 
 void LoadNStore::MEM(Executor *exec)
 {
-	int t = exec->pipelineRegister[2][B2];
-	if (type == SB || type == SH || type == SW)
-	{
-		getForwardResult2(exec);
-//		if (exec->pipelineRegister[2][B2] != t) puts("AAAAAAA");
-	}
-
 	exec->pipelineRegister[3][IR3] = exec->pipelineRegister[2][IR2];
 	switch (type)
 	{

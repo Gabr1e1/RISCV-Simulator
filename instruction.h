@@ -27,7 +27,7 @@ enum IDEXRegister
 };
 enum EXMEMRegister
 {
-	IR2, ALUOutput2, cond2, B2
+	IR2, ALUOutput2, cond2, B2, Imm2
 };
 enum MEMWBRegister
 {
@@ -51,8 +51,6 @@ public:
 	void flush(Executor *exec);
 
 	void getForwardResult(Executor *exec);
-
-	void getForwardResult2(Executor *exec);
 
 	bool IF(Executor *exec);
 

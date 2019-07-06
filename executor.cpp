@@ -47,9 +47,11 @@ void Executor::read()
 bool Executor::lockCheck()
 {
 	auto a = Util::getBits(15, 19, (unsigned) pipelineRegister[0][IR0]);
+	auto b = Util::getBits(20, 24, (unsigned) pipelineRegister[0][IR0]);
+
 	auto op = Util::getBits(0, 6, (unsigned) pipelineRegister[1][IR1]);
 	auto c = Util::getBits(7, 11, (unsigned) pipelineRegister[1][IR1]);
-	return true;
+	return (op == 0b0000011) && (a == c || b == c);
 }
 
 int Executor::execute()
@@ -71,18 +73,15 @@ int Executor::execute()
 			curInst = *reinterpret_cast<unsigned int *>(mem + pc);
 			cur[0] = parseInst(curInst);
 
-//			printf("%x\n", pc);
-//			for (int i = 0; i < 32; i++) std::cout << reg[i] << " ";
-//			std::cout << std::endl;
-
 			if (cur[0] != nullptr && !(cur[0]->IF(this)))
 			{
 				if (cur[0] != nullptr) delete cur[0], cur[0] = nullptr;
 				if (cur[1] != nullptr) delete cur[1], cur[1] = nullptr;
 			}
-			for (int i = 4; i > 0 + (cur[0] != nullptr && lockCheck()); i--) cur[i] = cur[i - 1];
-//			printf("%d\n", (cur[0] != nullptr && lockCheck()));
-			cur[0 + (cur[0] != nullptr && lockCheck())] = nullptr;
+
+			bool t = (cur[0] != nullptr) && lockCheck();
+			for (int i = 4; i > 0 + t; i--) cur[i] = cur[i - 1];
+			cur[0 + t] = nullptr;
 		}
 		else
 		{
