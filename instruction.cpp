@@ -18,7 +18,7 @@ void Instruction::flush(Executor *exec)
 bool Instruction::IF(Executor *exec)
 {
 	exec->pipelineRegister[0][IR0] = inst;
-	auto op = Util::getBits(0, 6, (unsigned) exec->pipelineRegister[2][IR2]);
+	auto op = exec->pipelineRegister[2][IR2] & 0b1111111;
 	if (op == 0b1100011 && exec->pipelineRegister[2][cond2])
 	{
 		exec->pipelineRegister[0][NPC0] = exec->pc = exec->pipelineRegister[2][ALUOutput2];
@@ -86,12 +86,12 @@ void Instruction::getForwardResult(Executor *exec)
 	int rs2 = Util::getBits(20, 24, (unsigned) exec->pipelineRegister[1][IR1]);
 
 //	could already be written to register
-	exec->pipelineRegister[1][A1] = exec->reg[rs1];
-	exec->pipelineRegister[1][B1] = exec->reg[rs2];
+	if (rs1) exec->pipelineRegister[1][A1] = exec->reg[rs1];
+	if (rs2) exec->pipelineRegister[1][B1] = exec->reg[rs2];
 
 //	MEM stage
 	int rd = Util::getBits(7, 11, (unsigned) exec->pipelineRegister[3][IR3]);
-	int op = Util::getBits(0, 6, (unsigned) exec->pipelineRegister[3][IR3]);
+	int op = exec->pipelineRegister[3][IR3] & 0b1111111;
 
 	if ((rs1 == rd && rd != 0) && (op == 0b0110111 || op == 0b0110011 || op == 0b0010011 || op == 0b1101111 ||
 								   op == 0b1100111)) //LUI, JAL, JALR, IntCom could change the value in MEM stage
@@ -107,7 +107,7 @@ void Instruction::getForwardResult(Executor *exec)
 
 //	ALU stage
 	rd = Util::getBits(7, 11, (unsigned) exec->pipelineRegister[2][IR2]);
-	op = Util::getBits(0, 6, (unsigned) exec->pipelineRegister[2][IR2]);
+	op = exec->pipelineRegister[2][IR2] & 0b1111111;
 
 	if ((rs1 == rd && rd != 0) && (op == 0b0110111 || op == 0b0110011 || op == 0b0010011 || op == 0b1101111 ||
 								   op == 0b1100111)) //JAL, JALR, IntCom could change the value in ALU stage
@@ -119,7 +119,7 @@ void Instruction::getForwardResult(Executor *exec)
 
 CtrlTrans::CtrlTrans(unsigned int _inst, EncodingType _type) : Instruction(_inst, _type)
 {
-	auto op = Util::getBits(0, 6, inst);
+	auto op = inst & 0b1111111;
 	if (op == 0b1100011) type = (CTType) Util::getBits(12, 14, inst);
 	else if (op == 0b1101111) type = JAL;
 	else type = JALR;
@@ -253,7 +253,7 @@ void LoadNStore::WB(Executor *exec)
 
 IntCom::IntCom(unsigned int _inst, EncodingType _type) : Instruction(_inst, _type)
 {
-	auto op = Util::getBits(0, 6, inst);
+	auto op = inst & 0b1111111;
 	if (op == 0b0010011)
 	{
 		type = (ICType) Util::getBits(12, 14, inst);
@@ -327,16 +327,14 @@ void IntCom::EX(Executor *exec)
 													 (unsigned) (exec->pipelineRegister[1][B1]));
 			break;
 		case XOR:
-			exec->pipelineRegister[2][ALUOutput2] =
-					(unsigned) exec->pipelineRegister[1][A1] ^ (unsigned) exec->pipelineRegister[1][B1];
+			exec->pipelineRegister[2][ALUOutput2] = exec->pipelineRegister[1][A1] ^ exec->pipelineRegister[1][B1];
 			break;
 		case SRL:
 			exec->pipelineRegister[2][ALUOutput2] = (int) (((unsigned) exec->pipelineRegister[1][A1])
 					>> Util::getBits(0, 4, (unsigned) exec->pipelineRegister[1][B1]));
 			break;
 		case OR:
-			exec->pipelineRegister[2][ALUOutput2] =
-					(unsigned) exec->pipelineRegister[1][A1] | (unsigned) exec->pipelineRegister[1][B1];
+			exec->pipelineRegister[2][ALUOutput2] = exec->pipelineRegister[1][A1] | exec->pipelineRegister[1][B1];
 			break;
 		case AND:
 			exec->pipelineRegister[2][ALUOutput2] =

@@ -12,10 +12,6 @@ enum EncodingType
 {
 	R, I, S, B, U, J
 };
-enum InstructionType
-{
-	CT, LNS, IC
-};
 
 enum IFIDRegister
 {
@@ -40,8 +36,6 @@ class Instruction
 {
 public:
 	EncodingType typeEnc;
-
-public:
 	unsigned int inst;
 
 public:

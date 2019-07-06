@@ -19,9 +19,11 @@ public:
 
 	int pipelineRegister[4][5] = {{0}};
 	int pc = 0;
+	Instruction **corres;
 
 public:
 	Executor(int MemSize = 0x20000);
+	~Executor();
 
 	void addInstruction(unsigned int offset, unsigned int inst);
 
@@ -29,7 +31,7 @@ public:
 
 	int execute();
 
-	Instruction *parseInst(unsigned int inst);
+	Instruction *parseInst(unsigned int inst, int loc);
 
 	bool lockCheck();
 };
