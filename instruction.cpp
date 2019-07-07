@@ -17,18 +17,18 @@ void Instruction::flush(Executor *exec)
 }
 
 
-void Instruction::modifyBHT(Executor *exec, int pc, bool curResult)
+void Instruction::modifyBHT(Executor *exec, int pc, bool taken)
 {
-	auto entry = Util::getBits(0, 11, (unsigned) pc);
+	auto entry = Util::getBits(1, 12, (unsigned) pc);
 	int res = Util::getBits(entry % 16 * 2, entry % 16 * 2 + 1, (unsigned) exec->bht[entry / 16]);
-	if (curResult) res += (res < 0b11);
-	else res += (res > 0b00);
+	if (taken) res += (res < 0b11);
+	else res -= (res > 0b00);
 	Util::writeBits(entry % 16 * 2, entry % 16 * 2 + 1, exec->bht[entry / 16], res);
 }
 
 bool Instruction::predictBranch(Executor *exec, int pc)
 {
-	auto entry = Util::getBits(0, 11, (unsigned) pc);
+	auto entry = Util::getBits(1, 12, (unsigned) pc);
 	return Util::getBits(entry % 16 * 2, entry % 16 * 2 + 1, (unsigned) exec->bht[entry / 16]) >= 0b10;
 }
 
@@ -38,13 +38,17 @@ int Instruction::IF(Executor *exec)
 
 	//check branch taken or not taken, possibly stalling the pipeline
 	auto op = (unsigned) exec->pipelineRegister[2][IR2] & 0b1111111;
-	if (op == 0b1100011 && exec->pipelineRegister[2][cond2] != predictBranch(exec, exec->pipelineRegister[2][NPC2] - 4))
+	if (op == 0b1100011)
 	{
-		exec->pipelineRegister[0][NPC0] = exec->pc = exec->pipelineRegister[2][ALUOutput2];
-		flush(exec);
-		exec->miss++;
-		modifyBHT(exec, exec->pipelineRegister[2][NPC2] - 4, (bool) exec->pipelineRegister[2][cond2]);
-		return 2;
+		if (exec->pipelineRegister[2][cond2] != predictBranch(exec, exec->pipelineRegister[2][NPC2] - 4))
+		{
+			exec->pipelineRegister[0][NPC0] = exec->pc = exec->pipelineRegister[2][ALUOutput2];
+			flush(exec);
+			exec->miss++;
+			modifyBHT(exec, exec->pipelineRegister[2][NPC2] - 4, (bool)exec->pipelineRegister[2][cond2]);
+			return 2;
+		}
+		modifyBHT(exec, exec->pipelineRegister[2][NPC2] - 4, (bool)exec->pipelineRegister[2][cond2]);
 	}
 	if ((op == 0b1101111 || op == 0b1100111) && exec->pipelineRegister[2][cond2])
 	{
@@ -66,7 +70,6 @@ int Instruction::IF(Executor *exec)
 				exec->pipelineRegister[0][NPC0] = exec->pc = target;
 				return 1;
 			}
-			else exec->pipelineRegister[1][IR1] = 0;
 		}
 	}
 
