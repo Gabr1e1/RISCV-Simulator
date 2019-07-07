@@ -23,7 +23,7 @@ enum IDEXRegister
 };
 enum EXMEMRegister
 {
-	IR2, ALUOutput2, cond2, B2, Imm2
+	IR2, ALUOutput2, cond2, B2
 };
 enum MEMWBRegister
 {
@@ -46,7 +46,9 @@ public:
 
 	void getForwardResult(Executor *exec);
 
-	bool IF(Executor *exec);
+	bool predictBranch(Executor *exec, int pc);
+
+	int IF(Executor *exec);
 
 	void ID(Executor *exec);
 
@@ -55,6 +57,9 @@ public:
 	virtual void MEM(Executor *exec) = 0;
 
 	virtual void WB(Executor *exec) = 0;
+
+private:
+	void modifyBHT(Executor *exec, int pc, bool curResult);
 };
 
 class CtrlTrans : public Instruction

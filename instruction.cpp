@@ -12,31 +12,68 @@ Instruction::Instruction(unsigned int _inst, EncodingType _typeEnc) : inst(_inst
 
 void Instruction::flush(Executor *exec)
 {
-	exec->pipelineRegister[2][cond2] = false;
+	exec->pipelineRegister[2][IR2] = exec->pipelineRegister[2][IR2] & 0xffffff80;
+	exec->pipelineRegister[1][IR1] = 0;
 }
 
-bool Instruction::IF(Executor *exec)
+
+void Instruction::modifyBHT(Executor *exec, int pc, bool curResult)
+{
+	auto entry = Util::getBits(0, 12, (unsigned) pc);
+	int res = Util::getBits(entry % 16 * 2, entry % 16 * 2 + 1, (unsigned) exec->bht[entry / 16]);
+	if (curResult) res += (res < 0b11);
+	else res += (res > 0b00);
+	Util::writeBits(entry % 16 * 2, entry % 16 * 2 + 1, exec->bht[entry / 16], res);
+}
+
+bool Instruction::predictBranch(Executor *exec, int pc)
+{
+	return true;
+	auto entry = Util::getBits(0, 12, (unsigned) pc);
+	return Util::getBits(entry % 16 * 2, entry % 16 * 2 + 1, (unsigned) exec->bht[entry / 16]) >= 0b10;
+}
+
+int Instruction::IF(Executor *exec)
 {
 	exec->pipelineRegister[0][IR0] = inst;
-	auto op = exec->pipelineRegister[2][IR2] & 0b1111111;
-	if (op == 0b1100011 && exec->pipelineRegister[2][cond2])
+
+	//check branch taken or not taken, possibly stalling the pipeline
+	auto op = (unsigned) exec->pipelineRegister[2][IR2] & 0b1111111;
+	if (op == 0b1100011 && !exec->pipelineRegister[2][cond2])
 	{
 		exec->pipelineRegister[0][NPC0] = exec->pc = exec->pipelineRegister[2][ALUOutput2];
 		flush(exec);
-		return false;
+		return 2;
 	}
 	if ((op == 0b1101111 || op == 0b1100111) && exec->pipelineRegister[2][cond2])
 	{
 		flush(exec);
-		return false;
+		return 2;
 	}
+
+	//decide to jump or not
+	op = Util::getBits(0, 6, (unsigned) exec->pipelineRegister[1][IR1]);
+	if (op == 0b1100011)
+	{
+		if (predictBranch(exec, exec->pipelineRegister[1][NPC1] - 4))
+		{
+			auto target = exec->pipelineRegister[1][NPC1] + exec->pipelineRegister[1][Imm1] -
+						  4; //should have been calculated in ID phase
+			if (target != exec->pc)
+			{
+				exec->pipelineRegister[0][NPC0] = exec->pc = target;
+				return 1;
+			}
+			else exec->pipelineRegister[1][IR1] = 0;
+		}
+	}
+
 	exec->pipelineRegister[0][NPC0] = exec->pc = exec->pc + 4;
-	return true;
+	return 0;
 }
 
 void Instruction::ID(Executor *exec)
 {
-//	printf("INST: %x\n", inst);
 	exec->pipelineRegister[1][IR1] = exec->pipelineRegister[0][IR0];
 	exec->pipelineRegister[1][NPC1] = exec->pipelineRegister[0][NPC0];
 
@@ -165,7 +202,9 @@ void CtrlTrans::EX(Executor *exec)
 			break;
 	}
 	if (type == BEQ || type == BNE || type == BLT || type == BLTU || type == BGE || type == BGEU)
-		exec->pipelineRegister[2][ALUOutput2] = exec->pipelineRegister[1][NPC1] + exec->pipelineRegister[1][Imm1] - 4;
+		exec->pipelineRegister[2][ALUOutput2] = exec->pipelineRegister[2][cond2] ? (exec->pipelineRegister[1][NPC1] +
+																					exec->pipelineRegister[1][Imm1] - 4)
+																				 : exec->pipelineRegister[1][NPC1];
 }
 
 void CtrlTrans::MEM(Executor *exec)
@@ -197,7 +236,6 @@ void LoadNStore::EX(Executor *exec)
 	exec->pipelineRegister[2][IR2] = exec->pipelineRegister[1][IR1];
 	exec->pipelineRegister[2][ALUOutput2] = exec->pipelineRegister[1][A1] + exec->pipelineRegister[1][Imm1];
 	exec->pipelineRegister[2][B2] = exec->pipelineRegister[1][B1];
-	exec->pipelineRegister[2][Imm2] = exec->pipelineRegister[1][Imm1];
 }
 
 void LoadNStore::MEM(Executor *exec)

@@ -11,14 +11,19 @@
 class Util
 {
 public:
-	inline static unsigned int bitmask(unsigned int l, unsigned int r)
+	static unsigned int bitmask(unsigned int l, unsigned int r)
 	{
 		return (unsigned int)((1ull << (r + 1)) - (1ull << l));
 	}
 
-	inline static unsigned int getBits(unsigned int l, unsigned int r, unsigned int a)
+	static unsigned int getBits(unsigned int l, unsigned int r, unsigned int a)
 	{
-		return (a & bitmask(l, r)) >> l;
+		return (a & (unsigned int)((1ull << (r + 1)) - (1ull << l))) >> l;
+	}
+
+	static void writeBits(unsigned int l, unsigned int r, int &a, int x)
+	{
+		a = (a & (0xffffffff ^ bitmask(l,r))) | (x << l);
 	}
 
 	static unsigned int HEX2DEC(const std::string &str, int l, int r)

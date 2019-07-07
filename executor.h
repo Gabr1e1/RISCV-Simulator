@@ -13,6 +13,7 @@ class Instruction;
 
 class Executor
 {
+	static const int BHT_ENTRY = 4096;
 public:
 	int reg[32] = {0};
 	char *mem;
@@ -20,6 +21,7 @@ public:
 	int pipelineRegister[4][5] = {{0}};
 	int pc = 0;
 	Instruction **corres;
+	int bht[BHT_ENTRY / 16];
 
 public:
 	Executor(int MemSize = 0x20000);

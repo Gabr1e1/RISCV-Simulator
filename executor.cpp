@@ -78,10 +78,12 @@ int Executor::execute()
 			curInst = *reinterpret_cast<unsigned int *>(mem + pc);
 			cur[0] = parseInst(curInst, pc);
 
-			if (cur[0] != nullptr && !(cur[0]->IF(this)))
+//			printf("%x\n", pc);
+
+			if (cur[0] != nullptr)
 			{
-				cur[0] = nullptr;
-				cur[1] = nullptr;
+				auto result = cur[0]->IF(this);
+				for (int i = 0; i < result; i++) cur[i] = nullptr;
 			}
 
 			bool t = (cur[0] != nullptr) && lockCheck();
