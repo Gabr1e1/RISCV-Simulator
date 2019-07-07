@@ -19,7 +19,7 @@ void Instruction::flush(Executor *exec)
 
 void Instruction::modifyBHT(Executor *exec, int pc, bool curResult)
 {
-	auto entry = Util::getBits(0, 12, (unsigned) pc);
+	auto entry = Util::getBits(0, 11, (unsigned) pc);
 	int res = Util::getBits(entry % 16 * 2, entry % 16 * 2 + 1, (unsigned) exec->bht[entry / 16]);
 	if (curResult) res += (res < 0b11);
 	else res += (res > 0b00);
@@ -28,8 +28,7 @@ void Instruction::modifyBHT(Executor *exec, int pc, bool curResult)
 
 bool Instruction::predictBranch(Executor *exec, int pc)
 {
-	return true;
-	auto entry = Util::getBits(0, 12, (unsigned) pc);
+	auto entry = Util::getBits(0, 11, (unsigned) pc);
 	return Util::getBits(entry % 16 * 2, entry % 16 * 2 + 1, (unsigned) exec->bht[entry / 16]) >= 0b10;
 }
 
@@ -39,10 +38,12 @@ int Instruction::IF(Executor *exec)
 
 	//check branch taken or not taken, possibly stalling the pipeline
 	auto op = (unsigned) exec->pipelineRegister[2][IR2] & 0b1111111;
-	if (op == 0b1100011 && !exec->pipelineRegister[2][cond2])
+	if (op == 0b1100011 && exec->pipelineRegister[2][cond2] != predictBranch(exec, exec->pipelineRegister[2][NPC2] - 4))
 	{
 		exec->pipelineRegister[0][NPC0] = exec->pc = exec->pipelineRegister[2][ALUOutput2];
 		flush(exec);
+		exec->miss++;
+		modifyBHT(exec, exec->pipelineRegister[2][NPC2] - 4, (bool) exec->pipelineRegister[2][cond2]);
 		return 2;
 	}
 	if ((op == 0b1101111 || op == 0b1100111) && exec->pipelineRegister[2][cond2])
@@ -55,6 +56,7 @@ int Instruction::IF(Executor *exec)
 	op = Util::getBits(0, 6, (unsigned) exec->pipelineRegister[1][IR1]);
 	if (op == 0b1100011)
 	{
+		exec->total++;
 		if (predictBranch(exec, exec->pipelineRegister[1][NPC1] - 4))
 		{
 			auto target = exec->pipelineRegister[1][NPC1] + exec->pipelineRegister[1][Imm1] -
@@ -166,6 +168,7 @@ void CtrlTrans::EX(Executor *exec)
 {
 	getForwardResult(exec);
 	exec->pipelineRegister[2][IR2] = exec->pipelineRegister[1][IR1];
+	exec->pipelineRegister[2][NPC2] = exec->pipelineRegister[1][NPC1];
 	switch (type)
 	{
 		case JAL:

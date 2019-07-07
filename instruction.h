@@ -23,7 +23,7 @@ enum IDEXRegister
 };
 enum EXMEMRegister
 {
-	IR2, ALUOutput2, cond2, B2
+	IR2, NPC2, ALUOutput2, cond2, B2
 };
 enum MEMWBRegister
 {

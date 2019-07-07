@@ -24,6 +24,9 @@ public:
 	int bht[BHT_ENTRY / 16];
 
 public:
+	int total = 0, miss = 0;
+
+public:
 	Executor(int MemSize = 0x20000);
 	~Executor();
 
