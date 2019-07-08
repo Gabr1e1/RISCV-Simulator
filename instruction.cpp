@@ -139,9 +139,9 @@ void Instruction::getForwardResult(Executor *exec)
 		exec->pipelineRegister[1][A1] = exec->pipelineRegister[3][LMD3];
 
 	if ((rs2 == rd && rd != 0) && (op == 0b0110111 || op == 0b0110011 || op == 0b0010011 || op == 0b1101111 ||
-								   op == 0b1100111))
+								   op == 0b1100111)) //JAL, JALR, IntCom could change the value in MEM stage
 		exec->pipelineRegister[1][B1] = exec->pipelineRegister[3][ALUOutput3];
-	if ((rs2 == rd && rd != 0) && op == 0b0000011)
+	if ((rs2 == rd && rd != 0) && op == 0b0000011) //Load could change the value in MEM stage
 		exec->pipelineRegister[1][B1] = exec->pipelineRegister[3][LMD3];
 
 //	ALU stage
@@ -152,7 +152,7 @@ void Instruction::getForwardResult(Executor *exec)
 								   op == 0b1100111)) //JAL, JALR, IntCom could change the value in ALU stage
 		exec->pipelineRegister[1][A1] = exec->pipelineRegister[2][ALUOutput2];
 	if ((rs2 == rd && rd != 0) && (op == 0b0110111 || op == 0b0110011 || op == 0b0010011 || op == 0b1101111 ||
-								   op == 0b1100111))
+								   op == 0b1100111)) //JAL, JALR, IntCom could change the value in ALU stage
 		exec->pipelineRegister[1][B1] = exec->pipelineRegister[2][ALUOutput2];
 }
 
@@ -222,6 +222,7 @@ void CtrlTrans::WB(Executor *exec)
 	if (type == JAL || type == JALR)
 	{
 		exec->reg[rd] = exec->pipelineRegister[3][ALUOutput3];
+//		printf("JAL Modified %d %d\n", rd, exec->reg[rd]);
 	}
 }
 
