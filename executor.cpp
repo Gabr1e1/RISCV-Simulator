@@ -112,8 +112,7 @@ int Executor::execute()
 Instruction *Executor::parseInst(unsigned int inst, int loc)
 {
 	if (inst == 0x00c68223) return nullptr;
-	if (corres[loc] != nullptr) return corres[loc];
-
+//	if (corres[loc] != nullptr) return corres[loc];
 	auto op = inst & 0b1111111;
 	switch (op)
 	{
