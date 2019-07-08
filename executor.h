@@ -34,6 +34,8 @@ public:
 
 	void read();
 
+	void clearRegister(int x);
+
 	int execute();
 
 	Instruction *parseInst(unsigned int inst, int loc);

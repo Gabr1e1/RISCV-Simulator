@@ -61,6 +61,12 @@ bool Executor::lockCheck()
 //	return (op == 0b0000011) && (a == c || b == c);
 }
 
+void Executor::clearRegister(int x)
+{
+	if (x < 0) return;
+	memset(pipelineRegister[x], 0, sizeof(pipelineRegister[x]));
+}
+
 int Executor::execute()
 {
 	pc = 0;
@@ -69,7 +75,7 @@ int Executor::execute()
 
 	do
 	{
-		if (cur[4] != nullptr) cur[4]->WB(this), cur[4] = nullptr;
+		if (cur[4] != nullptr) cur[4]->WB(this), cur[4] = nullptr, clearRegister(3);
 		reg[0] = 0;
 		if (cur[3] != nullptr) cnt += cur[3]->MEM(this);
 		if (cur[2] != nullptr && cnt == 0) cur[2]->EX(this);
@@ -85,7 +91,7 @@ int Executor::execute()
 			if (cur[0] != nullptr)
 			{
 				auto result = cur[0]->IF(this);
-				for (int i = 0; i < result; i++) cur[i] = nullptr;
+				for (int i = 0; i < result; i++) cur[i] = nullptr, clearRegister(i - 1);
 			}
 
 			bool t = (cur[0] != nullptr) && lockCheck();
@@ -95,7 +101,7 @@ int Executor::execute()
 		else if (cnt > 0)
 		{
 			for (int i = 4; i > 3; i--) cur[i] = cur[i - 1];
-			cur[3] = nullptr;
+			cur[3] = nullptr, clearRegister(2);
 			cnt--;
 		}
 		else
