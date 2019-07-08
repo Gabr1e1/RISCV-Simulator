@@ -51,34 +51,36 @@ void Executor::read()
 
 bool Executor::lockCheck()
 {
-	auto a = Util::getBits(15, 19, (unsigned) pipelineRegister[0][IR0]);
-	auto b = Util::getBits(20, 24, (unsigned) pipelineRegister[0][IR0]);
+	return false; //no interlock due to the 3 cycles needed for Load/Store's MEM stage
 
-	auto op = pipelineRegister[1][IR1] & 0b1111111;
-	auto c = Util::getBits(7, 11, (unsigned) pipelineRegister[1][IR1]);
-	return (op == 0b0000011) && (a == c || b == c);
+//	auto a = Util::getBits(15, 19, (unsigned) pipelineRegister[0][IR0]);
+//	auto b = Util::getBits(20, 24, (unsigned) pipelineRegister[0][IR0]);
+//
+//	auto op = pipelineRegister[1][IR1] & 0b1111111;
+//	auto c = Util::getBits(7, 11, (unsigned) pipelineRegister[1][IR1]);
+//	return (op == 0b0000011) && (a == c || b == c);
 }
 
 int Executor::execute()
 {
 	pc = 0;
 	Instruction *cur[5] = {nullptr};
-	unsigned int curInst = 0;
+	unsigned int curInst = 0, cnt = 0;
 
 	do
 	{
 		if (cur[4] != nullptr) cur[4]->WB(this), cur[4] = nullptr;
 		reg[0] = 0;
-		if (cur[3] != nullptr) cur[3]->MEM(this);
-		if (cur[2] != nullptr) cur[2]->EX(this);
-		if (cur[1] != nullptr) cur[1]->ID(this);
+		if (cur[3] != nullptr) cnt += cur[3]->MEM(this);
+		if (cur[2] != nullptr && cnt == 0) cur[2]->EX(this);
+		if (cur[1] != nullptr && cnt == 0) cur[1]->ID(this);
 
-		if (cur[0] == nullptr) //no command stalling
+//		printf("%x\n", pc);
+
+		if (cur[0] == nullptr && cnt == 0) //no command stalling
 		{
 			curInst = *reinterpret_cast<unsigned int *>(mem + pc);
 			cur[0] = parseInst(curInst, pc);
-
-//			printf("%x\n", pc);
 
 			if (cur[0] != nullptr)
 			{
@@ -89,6 +91,12 @@ int Executor::execute()
 			bool t = (cur[0] != nullptr) && lockCheck();
 			for (int i = 4; i > 0 + t; i--) cur[i] = cur[i - 1];
 			cur[0 + t] = nullptr;
+		}
+		else if (cnt > 0)
+		{
+			for (int i = 4; i > 3; i--) cur[i] = cur[i - 1];
+			cur[3] = nullptr;
+			cnt--;
 		}
 		else
 		{

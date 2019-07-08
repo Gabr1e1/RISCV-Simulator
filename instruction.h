@@ -19,7 +19,7 @@ enum IFIDRegister
 };
 enum IDEXRegister
 {
-	IR1, NPC1, A1, B1, Imm1
+	IR1, NPC1, A1, B1, Imm1, JmpTarget1
 };
 enum EXMEMRegister
 {
@@ -54,7 +54,7 @@ public:
 
 	virtual void EX(Executor *exec) = 0;
 
-	virtual void MEM(Executor *exec) = 0;
+	virtual int MEM(Executor *exec) = 0;
 
 	virtual void WB(Executor *exec) = 0;
 
@@ -76,7 +76,7 @@ public:
 
 	void EX(Executor *exec);
 
-	void MEM(Executor *exec);
+	int MEM(Executor *exec);
 
 	void WB(Executor *exec);
 };
@@ -96,7 +96,7 @@ public:
 public:
 	void EX(Executor *exec);
 
-	void MEM(Executor *exec);
+	int MEM(Executor *exec);
 
 	void WB(Executor *exec);
 };
@@ -136,7 +136,7 @@ public:
 public:
 	void EX(Executor *exec);
 
-	void MEM(Executor *exec);
+	int MEM(Executor *exec);
 
 	void WB(Executor *exec);
 };

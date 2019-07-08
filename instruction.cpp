@@ -45,10 +45,10 @@ int Instruction::IF(Executor *exec)
 			exec->pipelineRegister[0][NPC0] = exec->pc = exec->pipelineRegister[2][ALUOutput2];
 			flush(exec);
 			exec->miss++;
-			modifyBHT(exec, exec->pipelineRegister[2][NPC2] - 4, (bool)exec->pipelineRegister[2][cond2]);
+			modifyBHT(exec, exec->pipelineRegister[2][NPC2] - 4, (bool) exec->pipelineRegister[2][cond2]);
 			return 2;
 		}
-		modifyBHT(exec, exec->pipelineRegister[2][NPC2] - 4, (bool)exec->pipelineRegister[2][cond2]);
+		modifyBHT(exec, exec->pipelineRegister[2][NPC2] - 4, (bool) exec->pipelineRegister[2][cond2]);
 	}
 	if ((op == 0b1101111 || op == 0b1100111) && exec->pipelineRegister[2][cond2])
 	{
@@ -63,11 +63,9 @@ int Instruction::IF(Executor *exec)
 		exec->total++;
 		if (predictBranch(exec, exec->pipelineRegister[1][NPC1] - 4))
 		{
-			auto target = exec->pipelineRegister[1][NPC1] + exec->pipelineRegister[1][Imm1] -
-						  4; //should have been calculated in ID phase
-			if (target != exec->pc)
+			if (exec->pipelineRegister[1][JmpTarget1] != exec->pc)
 			{
-				exec->pipelineRegister[0][NPC0] = exec->pc = target;
+				exec->pipelineRegister[0][NPC0] = exec->pc = exec->pipelineRegister[1][JmpTarget1];
 				return 1;
 			}
 		}
@@ -87,8 +85,6 @@ void Instruction::ID(Executor *exec)
 
 	int rs2 = Util::getBits(20, 24, (unsigned) exec->pipelineRegister[1][IR1]);
 	exec->pipelineRegister[1][B1] = exec->reg[rs2];
-
-//	printf("Using: %d %d %d\n", rs1, rs2, rd);
 
 	auto inst = (unsigned) exec->pipelineRegister[1][IR1];
 	switch (typeEnc)
@@ -118,6 +114,7 @@ void Instruction::ID(Executor *exec)
 			exec->pipelineRegister[1][Imm1] = 0;
 			break;
 	}
+	exec->pipelineRegister[1][JmpTarget1] = exec->pipelineRegister[1][NPC1] + exec->pipelineRegister[1][Imm1] - 4;
 //	std::cerr << "RS1: " << rs1 << " " << exec->pipelineRegister[1][A1] << " " << "rs2: " << rs2 << " " << exec->pipelineRegister[1][B1] << " " << "rd: " << rd << " "
 //			  << "imm: " << imm << std::endl;
 }
@@ -176,7 +173,7 @@ void CtrlTrans::EX(Executor *exec)
 	{
 		case JAL:
 			exec->pipelineRegister[2][ALUOutput2] = exec->pipelineRegister[1][NPC1];
-			exec->pc = exec->pipelineRegister[1][NPC1] + exec->pipelineRegister[1][Imm1] - 4;
+			exec->pc = exec->pipelineRegister[1][JmpTarget1];
 			exec->pipelineRegister[2][cond2] = true;
 			break;
 		case JALR:
@@ -208,15 +205,15 @@ void CtrlTrans::EX(Executor *exec)
 			break;
 	}
 	if (type == BEQ || type == BNE || type == BLT || type == BLTU || type == BGE || type == BGEU)
-		exec->pipelineRegister[2][ALUOutput2] = exec->pipelineRegister[2][cond2] ? (exec->pipelineRegister[1][NPC1] +
-																					exec->pipelineRegister[1][Imm1] - 4)
+		exec->pipelineRegister[2][ALUOutput2] = exec->pipelineRegister[2][cond2] ? exec->pipelineRegister[1][JmpTarget1]
 																				 : exec->pipelineRegister[1][NPC1];
 }
 
-void CtrlTrans::MEM(Executor *exec)
+int CtrlTrans::MEM(Executor *exec)
 {
 	exec->pipelineRegister[3][IR3] = exec->pipelineRegister[2][IR2];
 	exec->pipelineRegister[3][ALUOutput3] = exec->pipelineRegister[2][ALUOutput2];
+	return 0;
 }
 
 void CtrlTrans::WB(Executor *exec)
@@ -244,7 +241,7 @@ void LoadNStore::EX(Executor *exec)
 	exec->pipelineRegister[2][B2] = exec->pipelineRegister[1][B1];
 }
 
-void LoadNStore::MEM(Executor *exec)
+int LoadNStore::MEM(Executor *exec)
 {
 	exec->pipelineRegister[3][IR3] = exec->pipelineRegister[2][IR2];
 	switch (type)
@@ -284,6 +281,7 @@ void LoadNStore::MEM(Executor *exec)
 		default:
 			break;
 	}
+	return 2;
 }
 
 void LoadNStore::WB(Executor *exec)
@@ -402,10 +400,11 @@ void IntCom::EX(Executor *exec)
 	}
 }
 
-void IntCom::MEM(Executor *exec)
+int IntCom::MEM(Executor *exec)
 {
 	exec->pipelineRegister[3][IR3] = exec->pipelineRegister[2][IR2];
 	exec->pipelineRegister[3][ALUOutput3] = exec->pipelineRegister[2][ALUOutput2];
+	return 0;
 }
 
 void IntCom::WB(Executor *exec)
