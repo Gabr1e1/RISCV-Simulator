@@ -21,7 +21,8 @@ public:
 	int pipelineRegister[4][6] = {{0}};
 	int pc = 0;
 	Instruction **corres;
-	int bht[BHT_ENTRY / 16];
+	int history[BHT_ENTRY / 16], pattern[BHT_ENTRY / 4];
+
 
 public:
 	int total = 0, miss = 0;

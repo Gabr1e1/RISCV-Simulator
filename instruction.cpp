@@ -20,16 +20,23 @@ void Instruction::flush(Executor *exec)
 void Instruction::modifyBHT(Executor *exec, int pc, bool taken)
 {
 	auto entry = Util::getBits(1, 12, (unsigned) pc);
-	int res = Util::getBits(entry % 16 * 2, entry % 16 * 2 + 1, (unsigned) exec->bht[entry / 16]);
-	if (taken) res += (res < 0b11);
-	else res -= (res > 0b00);
-	Util::writeBits(entry % 16 * 2, entry % 16 * 2 + 1, exec->bht[entry / 16], res);
+	int res = Util::getBits(entry % 16 * 2, entry % 16 * 2 + 1, (unsigned) exec->history[entry / 16]);
+	auto p = Util::getBits(entry % 4 * 8 + res * 2, entry % 4 * 8 + res * 2 + 1, (unsigned) exec->pattern[entry / 4]);
+
+	res = ((res << 1) | taken) & 0b011;
+
+	Util::writeBits(entry % 16 * 2, entry % 16 * 2 + 1, exec->history[entry / 16], res);
+
+	if (taken) p += p < 0b11;
+	else p -= p > 0b00;
+	Util::writeBits(entry % 4 * 8 + res * 2, entry % 4 * 8 + res * 2 + 1, exec->pattern[entry / 4], p);
 }
 
 bool Instruction::predictBranch(Executor *exec, int pc)
 {
 	auto entry = Util::getBits(1, 12, (unsigned) pc);
-	return Util::getBits(entry % 16 * 2, entry % 16 * 2 + 1, (unsigned) exec->bht[entry / 16]) >= 0b10;
+	auto p = Util::getBits(entry % 16 * 2, entry % 16 * 2 + 1, (unsigned) exec->history[entry / 16]);
+	return Util::getBits(entry % 4 * 8 + p * 2, entry % 4 * 8 + p * 2 + 1, (unsigned) exec->pattern[entry / 4]) >= 0b10;
 }
 
 int Instruction::IF(Executor *exec)
@@ -114,6 +121,7 @@ void Instruction::ID(Executor *exec)
 			exec->pipelineRegister[1][Imm1] = 0;
 			break;
 	}
+	//need an adder(hardware) for this
 	exec->pipelineRegister[1][JmpTarget1] = exec->pipelineRegister[1][NPC1] + exec->pipelineRegister[1][Imm1] - 4;
 //	std::cerr << "RS1: " << rs1 << " " << exec->pipelineRegister[1][A1] << " " << "rs2: " << rs2 << " " << exec->pipelineRegister[1][B1] << " " << "rd: " << rd << " "
 //			  << "imm: " << imm << std::endl;
